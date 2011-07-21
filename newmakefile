@@ -1,0 +1,175 @@
+#This file is not currently used. It is meant to replace makefile. This file combines
+#all the .so's into a single vajra.so (code in jni.cpp -- jvm's constructor -- has to
+#be changed for this). 
+
+#IMPORTANT: Ensure that CLASSPATH has been set correctly before running 'make'
+
+#The CLASSPATH should include vre.jar to compile HelloWorld.java
+#But since we including this file before it gets created, jikes complains that the 
+#the CLASSPATH contains a non-existent file. This warning can be ignored
+
+#Use Sun compiler/runtime
+#CLASSPATH=/home/rajesh/j2sdk1.4.2_04/jre/lib/rt.jar:/home/rajesh/eclipse/workspace/vajra/vajra/vre.jar:/home/rajesh/eclipse/workspace/vajra/vajra
+#JAVAC = /home/rajesh/j2sdk1.4.2_04/bin/javac -classpath ${CLASSPATH}
+
+#Use Classpath and Jikes
+CLASSPATH=.:/home/rajesh/vajra/classpath.jar:./vre.jar
+JAVAC = /usr/bin/jikes -classpath ${CLASSPATH}
+
+#GCCDIR=/opt/gcc-3.4.3
+GCCDIR=/opt/gcc-4.0.0
+
+
+#CXX=/usr/bin/g++
+CXX=${GCCDIR}/bin/g++
+
+#INCLUDEDIRS=.:/usr/include/g++:/usr/include:/usr/local/include
+INCLUDEDIRS=.:${GCCDIR}/include:/usr/include:/usr/local/include
+
+#LIBDIRS=/usr/lib/gcc-lib/i586-suse-linux/3.3.3
+LIBDIRS=${GCCDIR}/lib
+
+CXXFLAGS = -O0 -g -DDEBUG -DDEEP_DEBUG -I${INCLUDEDIRS} -L${LIBDIRS}
+
+OBJS = ClassFile.o Class.o java.o jni.o jvm.o Logger.o \
+              method.o monitor.o object.o \
+              opcodes.o util.o ziplib.o
+
+LIBOBJS = java_lang_Thread_native_methods.o \
+	java_lang_VMSystem_native_methods.o \
+	java_lang_VMSecurityManager_native_methods.o \
+	java_lang_reflect_Method_native_methods.o \
+	java_lang_VMRuntime_native_methods.o \
+	java_lang_reflect_Field_native_methods.o \
+	java_lang_Runtime_native_methods.o \
+	java_lang_VMObject_native_methods.o \
+	java_lang_VMClass_native_methods.o
+
+JAR = /home/rajesh/j2sdk1.4.2_04/bin/jar 
+
+all : vajra all_libs classes
+
+vajra : ${OBJS}
+	${CXX} ${CXXFLAGS} -o vajra ${OBJS} -lz -ldl
+
+all_libs : com_vajra_Console.so vajra.so
+
+classes : vre.jar Test.class HelloWorld.class 
+
+clean : clean_vajra clean_libs clean_classes
+
+clean_vajra :
+	rm -rf vajra ${OBJS} temp.out vajra_1.c vajra_2.log
+
+clean_libs :
+	rm -rf com_vajra_Console.so vajra.so 
+	rm -rf java_lang_Object.so com_vajra_Runtime.so \
+		Console_native_methods.o java_lang_Object_native_methods.o Runtime_native_methods.o
+	rm -rf ${LIBOBJS}
+	rm -rf ${OBJS}
+
+clean_classes : 
+	rm -rf *.class vre.jar
+	rm -rf com/vajra/Console.class \
+		com/vajra/Runtime.class \
+		java/lang/reflect/Constructor.class \
+		java/lang/reflect/Field.class \
+		java/lang/reflect/Method.class \
+		java/lang/Class.class
+
+ClassFile.o : ClassFile.h util.h logger.h exceptions.h
+Class.o : vajra.h util.h
+java.o : jvm.h
+jni.o : jvm.h util.h
+jvm.o : jvm.h ClassFile.h vajra.h util.h logger.h
+Logger.o : logger.h
+method.o : method.h
+monitor.o : monitor.h
+object.o : vajra.h
+opcodes.o : jvm.h util.h
+util.o : util.h
+ziplib.o : ziplib.h
+
+ClassFile.h : ziplib.h
+	touch ClassFile.h
+
+vajra.h : jni.h field.h method.h ClassFile.h monitor.h
+	touch vajra.h
+
+jni.h : jni_md.h
+	touch jni.h
+
+jvm.h : jni.h vajra.h vajra.h exceptions.h
+	touch jvm.h
+
+method.h : ClassFile.h vajra.h jni.h
+	touch method.h
+
+com_vajra_Console.so : Console_native_methods.o 
+	${CXX} -g -shared -Wl,-soname,com_vajra_Console.so -o \
+		com_vajra_Console.so Console_native_methods.o -lc
+
+java_lang_Object.so : java_lang_Object_native_methods.o
+	${CXX} -g -shared -Wl,-soname,java_lang_Object.so -o \
+                java_lang_Object.so java_lang_Object_native_methods.o -lc
+
+com_vajra_Runtime.so : Runtime_native_methods.o 
+	${CXX} -g -shared -Wl,-soname,com_vajra_Runtime.so -o \
+		com_vajra_Runtime.so Runtime_native_methods.o -lc
+
+vajra.so : ${LIBOBJS} ${OBJS}
+	${CXX} ${CXXFLAGS} -g -shared -Wl,-soname,vajra.so -o vajra.so ${LIBOBJS} ${OBJS} -lc
+
+java_lang_VMClass_native_methods.o : java_lang_VMClass_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_VMClass_native_methods.cpp -o java_lang_VMClass_native_methods.o
+
+java_lang_Runtime_native_methods.o : java_lang_Runtime_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_Runtime_native_methods.cpp -o java_lang_Runtime_native_methods.o
+
+java_lang_Thread_native_methods.o : java_lang_Thread_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_Thread_native_methods.cpp -o java_lang_Thread_native_methods.o
+
+#java_lang_reflect_Constructor_native_methods.o : java_lang_reflect_Constructor_native_methods.cpp
+#	${CXX} ${CXXFLAGS} -c java_lang_reflect_Constructor_native_methods.cpp -o java_lang_reflect_Constructor_native_methods.o
+
+java_lang_reflect_Field_native_methods.o : java_lang_reflect_Field_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_reflect_Field_native_methods.cpp -o java_lang_reflect_Field_native_methods.o
+
+java_lang_reflect_Method_native_methods.o : java_lang_reflect_Method_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_reflect_Method_native_methods.cpp -o java_lang_reflect_Method_native_methods.o
+
+java_lang_VMRuntime_native_methods.o : java_lang_VMRuntime_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_VMRuntime_native_methods.cpp -o java_lang_VMRuntime_native_methods.o	
+
+java_lang_VMSystem_native_methods.o : java_lang_VMSystem_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_VMSystem_native_methods.cpp -o java_lang_VMSystem_native_methods.o
+
+java_lang_VMObject_native_methods.o : java_lang_VMObject_native_methods.cpp
+	${CXX} ${CXXFLAGS} -c java_lang_VMObject_native_methods.cpp -o java_lang_VMObject_native_methods.o
+
+Console_native_methods.o : Console_native_methods.cpp
+	${CXX} -fPIC -g -I${INCLUDEDIRS} -L${LIBDIRS} -c \
+		Console_native_methods.cpp -o Console_native_methods.o
+
+java_lang_Object_native_methods.o : java_lang_Object_native_methods.cpp
+	${CXX} -fPIC -g -I.:${INCLUDEDIRS} -L${LIBDIRS} -c \
+		java_lang_Object_native_methods.cpp \
+		-o java_lang_Object_native_methods.o
+
+Runtime_native_methods.o : Runtime_native_methods.cpp
+	${CXX} -fPIC -g -I${INCLUDEDIRS} -L${LIBDIRS} -c \
+		Runtime_native_methods.cpp -o Runtime_native_methods.o
+
+vre.jar : com/vajra/Console.java com/vajra/Runtime.java
+	${JAVAC} -d . com/vajra/Runtime.java
+	${JAVAC} -d . com/vajra/Console.java
+	${JAR} cvf vre.jar com
+	rm -rf com/vajra/*.class
+
+Test.class : Test.java vre.jar
+	${JAVAC} Test.java
+
+HelloWorld.class : HelloWorld.java vre.jar
+	${JAVAC} HelloWorld.java
+
+

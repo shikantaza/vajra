@@ -1,0 +1,34 @@
+PREQUISITES:
+------------
+
+1. Classpath (http://www.gnu.org/software/classpath/) should be installed.
+   The location of the .so files of Classpath should be included in 
+   LD_LIBRARY_PATH or in /etc/ld.so.conf. (IMPORTANT NOTE: It is assumed that classpath
+   is installed in /usr/local. Even if it is not, please create a symlink in /usr/local
+   that points to the actual installation directory) 
+
+2. Set the CLASSPATH environment variable to include classpath.jar (present in this directory) 
+
+   This is required because Vajra currently cannot use Classpath's 
+   glibj.zip. classpath.jar is functionally identical to glibj.zip (v0.09)
+
+3. Edit the makefile so that the following variables are set to the correct
+   values:
+
+   JAVAC
+   JAR
+   GCCDIR
+   INCLUDEDIRS
+   LIBDIRS
+
+INSTALLATION:
+-------------
+
+1. Run 'make' to build vajra.
+2. Add the current directory to LD_LIBRARY_PATH or /etc/ld.so.conf (as the case
+   may be).
+3. Run 'make Test' to run the test classes.
+
+Please report any issues to rajesh.jayaprakash@gmail.com
+
+
